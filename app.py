@@ -8,9 +8,7 @@ import sqlalchemy
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
-
 from flask import Flask, jsonify
-
 
 #################################################
 # Database Setup
@@ -25,8 +23,8 @@ Base.prepare(engine, reflect=True)
 # see the table
 Base.classes.keys()
 # Save references to each table
-Measurement=Base.classes.measurement
-Station=Base.classes.station
+Measurement = Base.classes.measurement
+Station = Base.classes.station
 
 #################################################
 # 2. Create an app, being sure to pass __name__
@@ -49,11 +47,10 @@ def welcome():
 @app.route("/api/v1.0/precipitation")
 def precipitation():
     # create a session link from python to database
-    #from sqlalchemy.orm import Session
     session = Session(engine)
     # query the result for dates and precipitation
     result = session.query(Measurement.date,Measurement.prcp).order_by(Measurement.date).all()
-        # Convert prec & date to a list of dictionary 
+    # Convert prec & date to a list of dictionary 
     prcp_date_list = []
     # # use for loop to get the list
     for date, prcp in result:
@@ -67,13 +64,12 @@ def precipitation():
 
 @app.route("/api/v1.0/stations")
 def stations():
-# create a session link from python to database
-    #from sqlalchemy.orm import Session
+    # create a session link from python to database
     session = Session(engine)
-    #declare station dictionary of list
-    stations={}
     #query the result for station
     result=session.query(Station.station, Station.name).all()
+    #declare station dictionary of list
+    stations={}
     # use for loop to get the list
     for stn,name in result:
         stations[stn]=name
@@ -84,8 +80,7 @@ def stations():
 
 @app.route("/api/v1.0/tobs")
 def tobs():
-# create a session link from python to database
-    #from sqlalchemy.orm import Session
+    # create a session link from python to database
     session = Session(engine)
     # Get the last date contained in the dataset and date from one year ago
     last_date = session.query(Measurement.date).order_by(Measurement.date.desc()).first()
@@ -95,6 +90,7 @@ def tobs():
     result = session.query(Measurement.date, Measurement.tobs).\
                 filter(Measurement.date >= last_year_date).\
                 order_by(Measurement.date).all()
+    #declare a list of Dictionary
     tobs_date_list=[]
     # use for loop to get the list
     for dates, tobs in result:
@@ -110,29 +106,9 @@ def tobs():
 def temp_range_start(start):
     # create a session link from python to database
     session = Session(engine)
-    
-    # First you need an array to select a statement
-    selection = [func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)]
-
-#Then we can query and use the filter which you had correct
-    result = session.query(*selection).\
-        filter(Measurement.date >= start).all()
-
-#Then you need to unravel the results into an array and convert it to a list. You can achieve this by using the np.ravel function
-    temperature = list(np.ravel(result))
-
-#Then you can jsonify
-    return jsonify(temperature)
-   
-@app.route("/api/v1.0/<start>/<end>")
-def temp_range_start_end(start,end):
-    # create a session link from python to database
-    session = Session(engine)
-    
     #Query to get the start end date
     result = session.query(Measurement.date,func.min(Measurement.tobs),func.avg(Measurement.tobs),func.max(Measurement.tobs)).\
-            filter(Measurement.date >= start, Measurement.date <= end).all()
-    
+            filter(Measurement.date >= start).all()
     #close the sission
     session.close()
     #declare a list of dictionary
@@ -143,8 +119,26 @@ def temp_range_start_end(start,end):
         return_list["TMIN"] = min
         return_list["TAVG"] = avg
         return_list["TMAX"] = max
-       
-        
+    #get the results
+    return jsonify(return_list)
+   
+@app.route("/api/v1.0/<start>/<end>")
+def temp_range_start_end(start,end):
+    # create a session link from python to database
+    session = Session(engine)
+    #Query to get the start end date
+    result = session.query(Measurement.date,func.min(Measurement.tobs),func.avg(Measurement.tobs),func.max(Measurement.tobs)).\
+            filter(Measurement.date >= start, Measurement.date <= end).all()
+    #close the sission
+    session.close()
+    #declare a list of dictionary
+    return_list = {}
+    # use for loop to get the list
+    for date, min, avg, max in result:
+        return_list["Date"] = date
+        return_list["TMIN"] = min
+        return_list["TAVG"] = avg
+        return_list["TMAX"] = max
     #get the results
     return jsonify(return_list)
 
